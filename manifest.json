@@ -1,0 +1,19 @@
+{
+    "name": "PagePilot",
+    "description": "Extension to summarize the current URL using the Kagi API and read it out using Chrome TTS",
+    "version": "1.0",
+    "manifest_version": 3,
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Summary TTS"
+    },
+    "permissions": [
+        "tts",
+        "storage",
+        "tabs",
+        "activeTab"
+    ],
+    "host_permissions": [
+        "https://labs.kagi.com/*"
+    ]
+}
