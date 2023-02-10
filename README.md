@@ -23,3 +23,9 @@ This can be done by following these steps:
 ## Usage
 
 Hit the summarize button on the extension popup to summarize the current webpage and it will read the summary out loud to you.
+
+## TODOS
+
+[] Styling the extension
+[] Poll the summary status in background and alert when summary is ready
+[] Highlight each word as the TTS speaks it
