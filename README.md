@@ -26,6 +26,7 @@ Hit the summarize button on the extension popup to summarize the current webpage
 
 ## TODOS
 
+[x] Highlight each word as the TTS speaks it (partially done)
 [] Styling the extension
 [] Poll the summary status in background and alert when summary is ready
-[] Highlight each word as the TTS speaks it
+[] Add build pipeline
