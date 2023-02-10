@@ -11,14 +11,21 @@ function decodeString(str) {
     return String.fromCharCode(parseInt(hex, 16));
   });
 }
-function speechCallback(event) {
-  console.log(event);
-  if (event.type === "start") {
-    speaking = true;
-  } else if (event.type === "end") {
-    speaking = false;
-  } else if (event.type === "word" || event.type === "sentence") {
-    console.log(event.charIndex);
+function renderSummary(summary) {
+  summary = decodeString(summary);
+  var summaryElement = document.getElementById("summary");
+  // clear any existing summary
+  summaryElement.innerHTML = "";
+  // for each sentence in the summary create a div and append it to the summary element
+  // set the div text to the sentence
+  // set the div class to "sentence"
+  var sentences = summary.split(".");
+  for (var i = 0; i < sentences.length; i++) {
+    var sentence = sentences[i];
+    var div = document.createElement("div");
+    div.className = "sentence";
+    div.textContent = sentence;
+    summaryElement.appendChild(div);
   }
 }
 
@@ -33,7 +40,6 @@ async function submitSummarizationRequest(url) {
   // if response.status is completed then return the summary
   const data = await response.json();
   var summaryStatusElement = document.getElementById("summary-status");
-  var summaryTextArea = document.getElementById("summary");
   // set the summary status element to the status and color yellow if the status is not completed
   // add last updated time to the status
   summaryStatusElement.textContent =
@@ -47,7 +53,6 @@ async function submitSummarizationRequest(url) {
     summaryStatusElement.style.color = "green";
   }
   if (data.status === "completed") {
-    summaryTextArea.textContent = decodeString(data.summary);
     return data.summary;
   } else {
     await new Promise((r) => setTimeout(r, 5000));
@@ -140,16 +145,32 @@ window.addEventListener("load", function () {
       var url = activeTab.url;
       submitSummarizationRequest(url).then((summary) => {
         if (summary !== "") {
+          renderSummary(summary);
+          var summaryElement = document.getElementById("summary");
+          // get each sentence from the summary
+          var sentences = summaryElement.getElementsByClassName("sentence");
+          var highlightedSentence = 0;
+          function speechCallback(event) {
+            console.log(event);
+            if (event.type === "start") {
+              speaking = true;
+            } else if (event.type === "end") {
+              sentences[highlightedSentence].className = "sentence highlighted";
+              speaking = false;
+              highlightedSentence++;
+            } else if (event.type === "word" || event.type === "sentence") {
+              console.log(event.charIndex);
+            }
+          }
           var voice = document.getElementById("voice-select").value;
           var rate = convertRate(document.getElementById("speed-slider").value);
           // split the summary into sentences
           // for each sentence call chrome.tts.speak enqueue: true
           // if the sentence is the last sentence then set onEvent to end the speaking
           // start speaking with the first sentence and enqueue the rest
-          var sentences = summary.split(".");
           for (var i = 0; i < sentences.length; i++) {
-            var sentence = decodeString(sentences[i]);
-
+            // set the class of sentence to highlight
+            var sentence = sentences[i].innerText;
             if (i === sentences.length - 1) {
               chrome.tts.speak(sentence, {
                 voiceName: voice,
