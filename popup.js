@@ -11,6 +11,16 @@ function decodeString(str) {
     return String.fromCharCode(parseInt(hex, 16));
   });
 }
+function speechCallback(event) {
+  console.log(event);
+  if (event.type === "start") {
+    speaking = true;
+  } else if (event.type === "end") {
+    speaking = false;
+  } else if (event.type === "word" || event.type === "sentence") {
+    console.log(event.charIndex);
+  }
+}
 
 async function submitSummarizationRequest(url) {
   var api_endpoint = "https://labs.kagi.com/v1";
@@ -145,31 +155,14 @@ window.addEventListener("load", function () {
                 voiceName: voice,
                 rate: rate,
                 enqueue: true,
-                onEvent: function (event) {
-                  if (event.type === "start") {
-                    speaking = true;
-                  } else if (event.type === "end") {
-                    speaking = false;
-                  }
-                },
+                onEvent: speechCallback,
               });
             } else {
               chrome.tts.speak(sentence, {
                 voiceName: voice,
                 rate: rate,
                 enqueue: true,
-                onEvent: function (event) {
-                  if (event.type === "start") {
-                    speaking = true;
-                  } else if (event.type === "end") {
-                    speaking = false;
-                  } else if (
-                    event.type === "word" ||
-                    event.type === "sentence"
-                  ) {
-                    console.log(event.charIndex);
-                  }
-                },
+                onEvent: speechCallback,
               });
             }
           }
