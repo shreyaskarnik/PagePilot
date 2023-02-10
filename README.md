@@ -6,8 +6,8 @@ This extension utilizes the [Kagi Universal Summarizer](https://labs.kagi.com/ai
 
 The text to speech is powered by `chrome.tts` [API](https://developer.chrome.com/docs/extensions/reference/tts/)
 
-
 ## Installation
+
 Since this extension is not yet published on the Chrome Web Store, you will need to install it manually.
 
 This can be done by following these steps:
