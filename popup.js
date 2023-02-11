@@ -1,3 +1,10 @@
+const API_ENDPOINT = "https://labs.kagi.com/v1";
+function splitText(text) {
+  // this function splits the text into sentences preserving the punctuation marks
+  // it returns an array of sentences split using regex
+  return text.match(/[^\.!\?]+[\.!\?]+/g);
+}
+
 function convertRate(rateString) {
   let rate = parseFloat(rateString);
   if (isNaN(rate) || rate < 0.1 || rate > 10.0) {
@@ -5,8 +12,9 @@ function convertRate(rateString) {
   }
   return rate;
 }
-
 function decodeString(str) {
+  // replace &quot with "
+  str = str.replace(/&quot;/g, '"');
   return str.replace(/&#x([\dA-Fa-f]+);/g, function (match, hex) {
     return String.fromCharCode(parseInt(hex, 16));
   });
@@ -19,7 +27,11 @@ function renderSummary(summary) {
   // for each sentence in the summary create a div and append it to the summary element
   // set the div text to the sentence
   // set the div class to "sentence"
-  var sentences = summary.split(".");
+  var re = /\b(\w\.\w\.)|([.?!])\s+(?=[A-Za-z])/g;
+  var result = summary.replace(re, function (m, g1, g2) {
+    return g1 ? g1 : g2 + "\r";
+  });
+  var sentences = result.split("\r");
   for (var i = 0; i < sentences.length; i++) {
     var sentence = sentences[i];
     var div = document.createElement("div");
@@ -30,34 +42,60 @@ function renderSummary(summary) {
 }
 
 async function submitSummarizationRequest(url) {
-  var api_endpoint = "https://labs.kagi.com/v1";
-
-  const response = await fetch(
-    api_endpoint + "/summary_status?url=" + encodeURIComponent(url)
-  );
-  // get the response
-  // if response.status is not completed then wait for 5 seconds and call the function again till response.status is completed
-  // if response.status is completed then return the summary
+  var payload = JSON.stringify({
+    url: url,
+  });
+  const response = await fetch(API_ENDPOINT + "/summarization", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: payload,
+  });
   const data = await response.json();
+  console.log(data);
+  return data;
+}
+async function checkStatus(url) {
   var summaryStatusElement = document.getElementById("summary-status");
-  // set the summary status element to the status and color yellow if the status is not completed
-  // add last updated time to the status
+  const response = await fetch(
+    API_ENDPOINT + "/summary_status?url=" + encodeURIComponent(url)
+  );
+  const data = await response.json();
   summaryStatusElement.textContent =
-    "Summary Status: " +
-    data.status +
-    " Last Updated: " +
-    response.headers.get("Date");
-  if (data.status !== "completed") {
+    "Status: " + data.status + " Last Updated: " + response.headers.get("Date");
+  if (data.status !== "completed" && data.status !== "failed") {
     summaryStatusElement.style.color = "grey";
-  } else {
-    summaryStatusElement.style.color = "green";
+  }
+  if (data.status === "failed") {
+    summaryStatusElement.textContent = "Summary Status: " + data.status;
+    summaryStatusElement.style.color = "red";
+    var summaryElement = document.getElementById("summary");
+    summaryElement.innerHTML = data.summary;
   }
   if (data.status === "completed") {
-    return data.summary;
-  } else {
-    await new Promise((r) => setTimeout(r, 5000));
-    return submitSummarizationRequest(url);
+    summaryStatusElement.style.color = "green";
   }
+  return data;
+}
+
+async function getSummary(url) {
+  var summaryElement = document.getElementById("summary");
+  summaryElement.innerHTML = "";
+  const summaryRequest = await submitSummarizationRequest(url);
+  console.log("sent summary request");
+  // while checkStatus response is not completed or failed keep checking when conditions are met return the summary
+  var summaryStatus = await checkStatus(url);
+  while (
+    summaryStatus.status !== "completed" &&
+    summaryStatus.status !== "failed"
+  ) {
+    await new Promise((r) => setTimeout(r, 1000));
+    console.log("checking status");
+    summaryStatus = await checkStatus(url);
+  }
+  return summaryStatus;
 }
 
 window.addEventListener("load", function () {
@@ -143,9 +181,9 @@ window.addEventListener("load", function () {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       var activeTab = tabs[0];
       var url = activeTab.url;
-      submitSummarizationRequest(url).then((summary) => {
-        if (summary !== "") {
-          renderSummary(summary);
+      getSummary(url).then((summary) => {
+        if (summary.summary !== "" && summary.status === "completed") {
+          renderSummary(summary.summary);
           var summaryElement = document.getElementById("summary");
           // get each sentence from the summary
           var sentences = summaryElement.getElementsByClassName("sentence");
